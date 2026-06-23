@@ -35,9 +35,10 @@ function runMigrations(db: Database.Database): void {
       wipe_time   TEXT    NOT NULL,
       server_name TEXT    NOT NULL,
       notes       TEXT,
-      closed      INTEGER NOT NULL DEFAULT 0,
-      created_by  TEXT    NOT NULL,
-      created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+      closed          INTEGER NOT NULL DEFAULT 0,
+      created_by      TEXT    NOT NULL,
+      created_by_tag  TEXT,
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS attendance (

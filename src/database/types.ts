@@ -11,6 +11,7 @@ export interface WipeRow {
   notes: string | null;
   closed: number;
   created_by: string;
+  created_by_tag: string | null;
   created_at: string;
 }
 

@@ -4,20 +4,20 @@ import {
   Interaction,
   ButtonInteraction,
   TextChannel,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
 } from 'discord.js';
 import { commands } from '../commands';
 import { handleVipButton, askVip } from '../services/vipService';
 import {
-  getWipeByMessageId,
   upsertAttendance,
   removeAttendance,
   getAttendance,
   getWipeById,
+  getAllAttendance,
+  closeWipe,
 } from '../services/wipeService';
-import { buildWipeEmbed } from '../utils/embeds';
+import { buildWipeEmbed, buildAttendanceEmbed } from '../utils/embeds';
+import { buildAttendanceRow } from '../commands/wipe';
+import { hasWipePermission } from '../utils/permissions';
 import { logger } from '../utils/logger';
 import { AttendanceStatus } from '../database/types';
 
@@ -38,7 +38,6 @@ export async function execute(_client: Client, interaction: Interaction): Promis
     }
   } catch (err) {
     logger.error('Unhandled interaction error:', err);
-
     const reply = { content: '❌ An unexpected error occurred.', ephemeral: true };
     if (interaction.isRepliable()) {
       if (interaction.replied || interaction.deferred) {
@@ -51,17 +50,63 @@ export async function execute(_client: Client, interaction: Interaction): Promis
 }
 
 async function handleButton(interaction: ButtonInteraction): Promise<void> {
-  const [category, action, idStr] = interaction.customId.split(':');
+  const parts = interaction.customId.split(':');
+  const category = parts[0];
 
-  // ── VIP buttons ──────────────────────────────────────────────────────────
+  // ── VIP buttons ───────────────────────────────────────────────────────────
   if (category === 'vip') {
     await handleVipButton(interaction);
     return;
   }
 
-  // ── Attendance buttons ────────────────────────────────────────────────────
+  // ── Attendance list button ────────────────────────────────────────────────
+  if (category === 'list') {
+    const wipeId = parseInt(parts[1], 10);
+    const wipe = getWipeById(wipeId);
+    if (!wipe) {
+      await interaction.reply({ content: '❌ Wipe not found.', ephemeral: true });
+      return;
+    }
+    const rows = getAllAttendance(wipeId);
+    const embed = buildAttendanceEmbed(wipe, rows);
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+    return;
+  }
+
+  // ── Close wipe button (⚙️) ────────────────────────────────────────────────
+  if (category === 'closewipe') {
+    const wipeId = parseInt(parts[1], 10);
+    const wipe = getWipeById(wipeId);
+
+    if (!wipe) {
+      await interaction.reply({ content: '❌ Wipe not found.', ephemeral: true });
+      return;
+    }
+
+    if (!interaction.inCachedGuild() || !hasWipePermission(interaction.member)) {
+      await interaction.reply({ content: '❌ You do not have permission to close wipes.', ephemeral: true });
+      return;
+    }
+
+    if (wipe.closed) {
+      await interaction.reply({ content: '🔒 This wipe is already closed.', ephemeral: true });
+      return;
+    }
+
+    closeWipe(wipeId);
+    logger.info(`Wipe #${wipeId} closed by ${interaction.user.username}`);
+
+    const updatedWipe = getWipeById(wipeId)!;
+    const embed = buildWipeEmbed(updatedWipe);
+    const disabledRow = buildAttendanceRow(wipeId, true);
+    await interaction.update({ embeds: [embed], components: [disabledRow] });
+    return;
+  }
+
+  // ── Attendance buttons (Accept / Decline / Late) ──────────────────────────
   if (category === 'attendance') {
-    const wipeId = parseInt(idStr, 10);
+    const action = parts[1];
+    const wipeId = parseInt(parts[2], 10);
     const wipe = getWipeById(wipeId);
 
     if (!wipe) {
@@ -78,9 +123,8 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     const existing = getAttendance(wipeId, interaction.user.id);
 
     if (existing && existing.status === status) {
-      // Toggle off — remove attendance
       removeAttendance(wipeId, interaction.user.id);
-      await interaction.reply({ content: `↩️ Removed your attendance.`, ephemeral: true });
+      await interaction.reply({ content: '↩️ Removed your attendance.', ephemeral: true });
     } else {
       upsertAttendance({
         wipe_id: wipeId,
@@ -89,21 +133,16 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         status,
       });
 
-      const label = status === 'yes' ? '✅ Yes' : status === 'no' ? '❌ No' : '⏰ Late';
-      await interaction.reply({ content: `${label} — attendance recorded!`, ephemeral: true });
+      const label = status === 'yes' ? '✅ Accepted' : status === 'no' ? '❌ Declined' : '🕐 Late';
+      await interaction.reply({ content: `${label} — recorded!`, ephemeral: true });
 
-      // Ask VIP if attending (yes or late)
       if (status === 'yes' || status === 'late') {
         const channel = interaction.channel as TextChannel | null;
-        if (channel) {
-          await askVip(interaction.user, wipeId, channel);
-        }
+        if (channel) await askVip(interaction.user, wipeId, channel);
       }
     }
 
-    // Update the wipe embed footer with live counts
     await refreshWipeEmbed(interaction, wipe.message_id, wipeId);
-    return;
   }
 }
 
@@ -118,25 +157,7 @@ async function refreshWipeEmbed(
 
     const message = await (interaction.channel as TextChannel).messages.fetch(messageId);
     const embed = buildWipeEmbed(wipe);
-
-    // Rebuild button row (keep the same component structure)
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`attendance:yes:${wipeId}`)
-        .setLabel('Yes')
-        .setEmoji('✅')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`attendance:no:${wipeId}`)
-        .setLabel('No')
-        .setEmoji('❌')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`attendance:late:${wipeId}`)
-        .setLabel('Late')
-        .setEmoji('⏰')
-        .setStyle(ButtonStyle.Primary),
-    );
+    const row = buildAttendanceRow(wipeId);
 
     await message.edit({ embeds: [embed], components: [row] });
   } catch (err) {

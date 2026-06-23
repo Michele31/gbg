@@ -1,33 +1,71 @@
 import { EmbedBuilder, ColorResolvable } from 'discord.js';
 import { WipeRow, AttendanceRow } from '../database/types';
 import { config } from '../config';
-import { getAttendanceCounts } from '../services/wipeService';
+import { getAllAttendance, getAttendanceCounts } from '../services/wipeService';
 
-const EMOJI = { yes: '✅', no: '❌', late: '⏰' } as const;
+/** Returns "in X days" / "today" / "X days ago" relative to now */
+function relativeDate(dateStr: string, timeStr: string): string {
+  const combined = new Date(`${dateStr}T${timeStr.replace(/[^0-9:]/g, '').slice(0, 5)}:00`);
+  if (isNaN(combined.getTime())) return '';
+  const diffMs = combined.getTime() - Date.now();
+  const diffDays = Math.round(diffMs / 86_400_000);
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'in 1 day';
+  if (diffDays > 1) return `in ${diffDays} days`;
+  if (diffDays === -1) return '1 day ago';
+  return `${Math.abs(diffDays)} days ago`;
+}
+
+function formatNames(rows: AttendanceRow[], status: 'yes' | 'no' | 'late'): string {
+  const filtered = rows.filter((r) => r.status === status);
+  if (filtered.length === 0) return 'None';
+  return filtered.map((r) => `<@${r.user_id}>${r.vip === 1 ? ' *(VIP)*' : ''}`).join('\n');
+}
 
 export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
   const counts = getAttendanceCounts(wipe.id);
+  const rows = getAllAttendance(wipe.id);
   const color = `#${config.embedColor}` as ColorResolvable;
+  const rel = relativeDate(wipe.wipe_date, wipe.wipe_time);
 
   const embed = new EmbedBuilder()
     .setColor(color)
-    .setTitle('🛢️  Wipe Announcement')
+    .setTitle(`📝  ${wipe.server_name}`)
     .addFields(
-      { name: 'Server', value: wipe.server_name, inline: true },
-      { name: 'Date', value: wipe.wipe_date, inline: true },
-      { name: 'Time', value: wipe.wipe_time, inline: true },
+      {
+        name: 'Date & Time',
+        value: [
+          `${wipe.wipe_date} ${wipe.wipe_time}`,
+          rel ? rel : '',
+          `(Timezone: ${config.timezone})`,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        inline: false,
+      },
+      {
+        name: `✅ Accepted (${counts.yes})`,
+        value: formatNames(rows, 'yes'),
+        inline: true,
+      },
+      {
+        name: `❌ Declined (${counts.no})`,
+        value: formatNames(rows, 'no'),
+        inline: true,
+      },
+      {
+        name: `🕐 Late (${counts.late})`,
+        value: formatNames(rows, 'late'),
+        inline: true,
+      },
     )
     .setFooter({
-      text: `${EMOJI.yes} ${counts.yes}  ${EMOJI.late} ${counts.late}  ${EMOJI.no} ${counts.no}${wipe.closed ? '  •  🔒 Closed' : ''}`,
+      text: `Created by: ${wipe.created_by_tag ?? 'Unknown'}${wipe.closed ? '  •  🔒 Closed' : ''}`,
     })
     .setTimestamp();
 
-  if (wipe.notes) embed.addFields({ name: 'Notes', value: wipe.notes });
-
-  if (config.teamRoleId) {
-    embed.setDescription(`<@&${config.teamRoleId}> React below to mark your attendance!`);
-  } else {
-    embed.setDescription('React below to mark your attendance!\n\n✅ Yes\n❌ No\n⏰ Late');
+  if (wipe.notes) {
+    embed.setDescription(`📌 ${wipe.notes}`);
   }
 
   return embed;
@@ -35,23 +73,28 @@ export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
 
 export function buildAttendanceEmbed(wipe: WipeRow, rows: AttendanceRow[]): EmbedBuilder {
   const color = `#${config.embedColor}` as ColorResolvable;
-
-  const group = (status: 'yes' | 'no' | 'late') =>
-    rows
-      .filter((r) => r.status === status)
-      .map((r) => `• <@${r.user_id}>${r.vip === 1 ? ' **(VIP)**' : ''}`)
-      .join('\n') || '*None*';
-
   const counts = getAttendanceCounts(wipe.id);
 
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle(`📋 Attendance — ${wipe.wipe_date} ${wipe.wipe_time}`)
+    .setTitle(`📋 Attendance — ${wipe.server_name}`)
     .addFields(
-      { name: `${EMOJI.yes} Yes (${counts.yes})`, value: group('yes') },
-      { name: `${EMOJI.late} Late (${counts.late})`, value: group('late') },
-      { name: `${EMOJI.no} No (${counts.no})`, value: group('no') },
+      {
+        name: `✅ Accepted (${counts.yes})`,
+        value: formatNames(rows, 'yes'),
+        inline: true,
+      },
+      {
+        name: `❌ Declined (${counts.no})`,
+        value: formatNames(rows, 'no'),
+        inline: true,
+      },
+      {
+        name: `🕐 Late (${counts.late})`,
+        value: formatNames(rows, 'late'),
+        inline: true,
+      },
     )
-    .setFooter({ text: `Total: ${rows.length}` })
+    .setFooter({ text: `Total: ${rows.length}  •  ${wipe.wipe_date} ${wipe.wipe_time}` })
     .setTimestamp();
 }

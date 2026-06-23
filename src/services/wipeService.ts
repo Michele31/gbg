@@ -12,13 +12,14 @@ export function createWipe(data: {
   server_name: string;
   notes?: string;
   created_by: string;
+  created_by_tag?: string;
 }): WipeRow {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO wipes (guild_id, channel_id, message_id, wipe_date, wipe_time, server_name, notes, created_by)
-    VALUES (@guild_id, @channel_id, @message_id, @wipe_date, @wipe_time, @server_name, @notes, @created_by)
+    INSERT INTO wipes (guild_id, channel_id, message_id, wipe_date, wipe_time, server_name, notes, created_by, created_by_tag)
+    VALUES (@guild_id, @channel_id, @message_id, @wipe_date, @wipe_time, @server_name, @notes, @created_by, @created_by_tag)
   `);
-  const result = stmt.run({ ...data, notes: data.notes ?? null });
+  const result = stmt.run({ ...data, notes: data.notes ?? null, created_by_tag: data.created_by_tag ?? null });
   return getWipeById(result.lastInsertRowid as number)!;
 }
 
