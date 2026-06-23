@@ -3,7 +3,8 @@ import { getAllPlayers } from './services/playerService';
 import { logger } from './utils/logger';
 
 const API_KEY = process.env.API_KEY ?? '';
-const PORT    = parseInt(process.env.API_PORT ?? '3000', 10);
+// Railway assigns the public-facing port via PORT — prefer it, fall back to API_PORT
+const PORT    = parseInt(process.env.PORT ?? process.env.API_PORT ?? '3000', 10);
 
 export function startApi(): void {
   const server = http.createServer((req, res) => {
