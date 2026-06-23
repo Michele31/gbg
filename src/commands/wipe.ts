@@ -87,11 +87,6 @@ export function buildAttendanceRow(wipeId: number, disabled = false): ActionRowB
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(disabled),
     new ButtonBuilder()
-      .setCustomId(`list:${wipeId}`)
-      .setEmoji('📋')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(disabled),
-    new ButtonBuilder()
       .setCustomId(`closewipe:${wipeId}`)
       .setEmoji('⚙️')
       .setStyle(ButtonStyle.Primary)

@@ -11,6 +11,7 @@ async function main(): Promise<void> {
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMembers,
       GatewayIntentBits.DirectMessages,
     ],
     partials: [Partials.Channel, Partials.Message],

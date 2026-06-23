@@ -12,10 +12,9 @@ import {
   removeAttendance,
   getAttendance,
   getWipeById,
-  getAllAttendance,
   closeWipe,
 } from '../services/wipeService';
-import { buildWipeEmbed, buildAttendanceEmbed } from '../utils/embeds';
+import { buildWipeEmbed } from '../utils/embeds';
 import { buildAttendanceRow } from '../commands/wipe';
 import { hasWipePermission } from '../utils/permissions';
 import { logger } from '../utils/logger';
@@ -56,20 +55,6 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
   // ── VIP buttons ───────────────────────────────────────────────────────────
   if (category === 'vip') {
     await handleVipButton(interaction);
-    return;
-  }
-
-  // ── Attendance list button ────────────────────────────────────────────────
-  if (category === 'list') {
-    const wipeId = parseInt(parts[1], 10);
-    const wipe = getWipeById(wipeId);
-    if (!wipe) {
-      await interaction.reply({ content: '❌ Wipe not found.', ephemeral: true });
-      return;
-    }
-    const rows = getAllAttendance(wipeId);
-    const embed = buildAttendanceEmbed(wipe, rows);
-    await interaction.reply({ embeds: [embed], ephemeral: true });
     return;
   }
 

@@ -19,7 +19,7 @@ function relativeDate(dateStr: string, timeStr: string): string {
 function formatNames(rows: AttendanceRow[], status: 'yes' | 'no' | 'late'): string {
   const filtered = rows.filter((r) => r.status === status);
   if (filtered.length === 0) return 'None';
-  return filtered.map((r) => `<@${r.user_id}>${r.vip === 1 ? ' *(VIP)*' : ''}`).join('\n');
+  return filtered.map((r) => `<@${r.user_id}>${r.vip === 1 ? ' 👑' : ''}`).join('\n');
 }
 
 export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
