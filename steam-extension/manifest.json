@@ -5,7 +5,9 @@
   "description": "Bulk rename Steam friends from a custom nickname list",
   "permissions": ["storage", "scripting", "tabs"],
   "host_permissions": [
-    "https://steamcommunity.com/*"
+    "https://steamcommunity.com/*",
+    "https://*.railway.app/*",
+    "http://localhost/*"
   ],
   "action": {
     "default_popup": "popup.html",

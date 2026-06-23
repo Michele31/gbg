@@ -2,11 +2,13 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { config } from './config';
 import { initDatabase } from './database';
 import { registerEvents } from './events';
+import { startApi } from './api';
 import { logger } from './utils/logger';
 
 async function main(): Promise<void> {
   logger.info(`DATABASE_PATH = ${config.databasePath}`);
   initDatabase();
+  startApi();
 
   const client = new Client({
     intents: [

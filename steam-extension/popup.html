@@ -7,7 +7,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      width: 380px;
+      width: 400px;
       background: #1b2838;
       color: #c6d4df;
       font-family: 'Segoe UI', sans-serif;
@@ -16,27 +16,51 @@
 
     header {
       background: #171a21;
-      padding: 14px 16px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
       border-bottom: 1px solid #2a3f5f;
     }
     header h1 { font-size: 15px; color: #66c0f4; font-weight: 600; }
-    header span { font-size: 11px; color: #7a9bb5; margin-left: auto; }
+    header button {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #7a9bb5;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 4px;
+    }
+    header button:hover { color: #c6d4df; }
 
-    .body { padding: 14px 16px; }
+    .section { padding: 14px 16px; border-bottom: 1px solid #2a3f5f; }
 
     label { display: block; font-size: 11px; color: #7a9bb5; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
 
-    textarea {
+    input[type=text], input[type=password] {
       width: 100%;
-      height: 160px;
       background: #131a21;
       border: 1px solid #2a3f5f;
       border-radius: 4px;
       color: #c6d4df;
       font-size: 12px;
+      padding: 7px 9px;
+      outline: none;
+      margin-bottom: 8px;
+    }
+    input:focus { border-color: #66c0f4; }
+
+    .row { display: flex; gap: 8px; }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      background: #131a21;
+      border: 1px solid #2a3f5f;
+      border-radius: 4px;
+      color: #c6d4df;
+      font-size: 11px;
       font-family: monospace;
       padding: 8px;
       resize: vertical;
@@ -44,48 +68,41 @@
     }
     textarea:focus { border-color: #66c0f4; }
 
-    .hint {
-      margin-top: 6px;
-      font-size: 11px;
-      color: #556677;
-    }
+    .hint { margin-top: 5px; font-size: 11px; color: #556677; }
 
-    .actions { margin-top: 14px; display: flex; gap: 8px; }
+    button.primary { background: #4c8dae; color: #fff; }
+    button.secondary { background: #2a3f5f; color: #c6d4df; }
+    button.success { background: #4caf74; color: #fff; }
 
     button {
       flex: 1;
-      padding: 9px;
+      padding: 8px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       transition: opacity .15s;
     }
     button:hover { opacity: .85; }
     button:disabled { opacity: .4; cursor: not-allowed; }
 
-    #btnRename { background: #4c8dae; color: #fff; }
-    #btnClear  { background: #2a3f5f; color: #c6d4df; flex: 0 0 80px; }
-
     #status {
-      margin-top: 12px;
-      min-height: 36px;
+      margin: 10px 16px 0;
+      min-height: 32px;
       background: #131a21;
       border-radius: 4px;
-      padding: 8px 10px;
+      padding: 7px 10px;
       font-size: 12px;
-      line-height: 1.5;
       border: 1px solid #2a3f5f;
-      white-space: pre-wrap;
     }
     .ok   { color: #57f287; }
     .err  { color: #ed4245; }
     .info { color: #66c0f4; }
 
     #log {
-      margin-top: 10px;
-      max-height: 120px;
+      margin: 8px 16px 14px;
+      max-height: 110px;
       overflow-y: auto;
       background: #131a21;
       border: 1px solid #2a3f5f;
@@ -96,25 +113,56 @@
       display: none;
     }
     #log p { margin: 2px 0; }
+
+    /* Settings panel */
+    #settingsPanel { display: none; }
+    #settingsPanel.open { display: block; }
+    #mainPanel.hidden { display: none; }
   </style>
 </head>
 <body>
+
+  <!-- ── Header ── -->
   <header>
     <h1>⚙️ GBG Bulk Renamer</h1>
-    <span id="friendCount"></span>
+    <button id="btnSettings" title="Settings">🔧</button>
   </header>
 
-  <div class="body">
-    <label>Nickname list</label>
-    <textarea id="list" placeholder="SteamID64 | Nickname&#10;76561198XXXXXXXXX | GBG.Ghosterino&#10;76561198YYYYYYYYY | GBG.Player2&#10;&#10;or&#10;&#10;vanityname | GBG.Ghosterino"></textarea>
-    <p class="hint">One entry per line — <code>SteamID64 | Nickname</code> or <code>vanity | Nickname</code></p>
+  <!-- ── Settings Panel ── -->
+  <div id="settingsPanel">
+    <div class="section">
+      <label>Bot API URL</label>
+      <input type="text" id="apiUrl" placeholder="https://your-railway-app.up.railway.app" />
+      <label>API Key</label>
+      <input type="password" id="apiKey" placeholder="your_secret_key" />
+      <label>Nickname prefix (optional)</label>
+      <input type="text" id="prefix" placeholder="GBG." />
+      <div class="row">
+        <button class="primary" id="btnSaveSettings">💾 Save</button>
+        <button class="secondary" id="btnBackFromSettings">← Back</button>
+      </div>
+    </div>
+  </div>
 
-    <div class="actions">
-      <button id="btnRename">🔄 Rename All</button>
-      <button id="btnClear">Clear</button>
+  <!-- ── Main Panel ── -->
+  <div id="mainPanel">
+    <div class="section">
+      <div class="row" style="margin-bottom:10px">
+        <button class="success" id="btnFetch">🔄 Fetch from Bot</button>
+        <button class="secondary" id="btnClear" style="flex:0 0 70px">Clear</button>
+      </div>
+      <label>Rename list — <code>SteamID64 | Nickname</code></label>
+      <textarea id="list" placeholder="Click 'Fetch from Bot' to auto-populate&#10;or paste manually:&#10;&#10;76561198XXXXXXXXX | GBG.Ghosterino&#10;76561198YYYYYYYYY | GBG.Player2"></textarea>
+      <p class="hint">Only SteamID64 (17-digit) entries are sent to Steam.</p>
     </div>
 
-    <div id="status" class="info">Open your Steam profile page, then click Rename All.</div>
+    <div class="section">
+      <div class="row">
+        <button class="primary" id="btnRename">✏️ Rename All</button>
+      </div>
+    </div>
+
+    <div id="status" class="info">Configure the API URL in settings (🔧), then fetch your roster.</div>
     <div id="log"></div>
   </div>
 

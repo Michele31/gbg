@@ -1,36 +1,123 @@
-const listEl       = document.getElementById('list');
-const btnRename    = document.getElementById('btnRename');
-const btnClear     = document.getElementById('btnClear');
-const statusEl     = document.getElementById('status');
-const logEl        = document.getElementById('log');
-const friendCount  = document.getElementById('friendCount');
+const listEl      = document.getElementById('list');
+const btnRename   = document.getElementById('btnRename');
+const btnClear    = document.getElementById('btnClear');
+const btnFetch    = document.getElementById('btnFetch');
+const btnSettings = document.getElementById('btnSettings');
+const btnSave     = document.getElementById('btnSaveSettings');
+const btnBack     = document.getElementById('btnBackFromSettings');
+const statusEl    = document.getElementById('status');
+const logEl       = document.getElementById('log');
+const apiUrlEl    = document.getElementById('apiUrl');
+const apiKeyEl    = document.getElementById('apiKey');
+const prefixEl    = document.getElementById('prefix');
+const mainPanel   = document.getElementById('mainPanel');
+const settingsPanel = document.getElementById('settingsPanel');
 
-// Persist the list across popup opens
-chrome.storage.local.get('nicklist', ({ nicklist }) => {
-  if (nicklist) listEl.value = nicklist;
-});
-listEl.addEventListener('input', () => {
-  chrome.storage.local.set({ nicklist: listEl.value });
+// ── Load saved settings ───────────────────────────────────────────────────────
+chrome.storage.local.get(['nicklist', 'apiUrl', 'apiKey', 'prefix'], (data) => {
+  if (data.nicklist) listEl.value = data.nicklist;
+  if (data.apiUrl)   apiUrlEl.value = data.apiUrl;
+  if (data.apiKey)   apiKeyEl.value = data.apiKey;
+  if (data.prefix !== undefined) prefixEl.value = data.prefix;
 });
 
+listEl.addEventListener('input', () => chrome.storage.local.set({ nicklist: listEl.value }));
+
+// ── Settings panel ────────────────────────────────────────────────────────────
+btnSettings.addEventListener('click', () => {
+  mainPanel.classList.add('hidden');
+  settingsPanel.classList.add('open');
+});
+
+btnBack.addEventListener('click', () => {
+  mainPanel.classList.remove('hidden');
+  settingsPanel.classList.remove('open');
+});
+
+btnSave.addEventListener('click', () => {
+  chrome.storage.local.set({
+    apiUrl:  apiUrlEl.value.trim().replace(/\/$/, ''),
+    apiKey:  apiKeyEl.value.trim(),
+    prefix:  prefixEl.value,
+  });
+  mainPanel.classList.remove('hidden');
+  settingsPanel.classList.remove('open');
+  setStatus('✅ Settings saved.', 'ok');
+});
+
+// ── Fetch roster from bot API ─────────────────────────────────────────────────
+btnFetch.addEventListener('click', async () => {
+  const { apiUrl, apiKey, prefix } = await getSettings();
+  if (!apiUrl) {
+    setStatus('❌ Set the Bot API URL in settings (🔧) first.', 'err');
+    return;
+  }
+
+  btnFetch.disabled = true;
+  setStatus('⏳ Fetching roster…', 'info');
+
+  try {
+    const res = await fetch(`${apiUrl}/roster`, {
+      headers: apiKey ? { 'x-api-key': apiKey } : {},
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const players = await res.json();
+
+    if (!players.length) {
+      setStatus('⚠️ Roster is empty — no members registered yet.', 'info');
+      btnFetch.disabled = false;
+      return;
+    }
+
+    // Build the list: only players whose steam URL contains a SteamID64
+    const lines = [];
+    const skipped = [];
+
+    for (const p of players) {
+      const id = extractSteamId(p.steam);
+      const nick = (prefix ?? 'GBG.') + p.username;
+      if (id) {
+        lines.push(`${id} | ${nick}`);
+      } else {
+        skipped.push(p.username);
+      }
+    }
+
+    listEl.value = lines.join('\n');
+    chrome.storage.local.set({ nicklist: listEl.value });
+
+    const msg = skipped.length
+      ? `✅ ${lines.length} fetched. ⚠️ ${skipped.length} skipped (no SteamID64): ${skipped.join(', ')}`
+      : `✅ ${lines.length} members loaded from roster.`;
+    setStatus(msg, 'ok');
+  } catch (e) {
+    setStatus(`❌ Failed to fetch: ${e.message}`, 'err');
+  }
+
+  btnFetch.disabled = false;
+});
+
+// ── Clear ─────────────────────────────────────────────────────────────────────
 btnClear.addEventListener('click', () => {
   listEl.value = '';
   chrome.storage.local.remove('nicklist');
-  setStatus('Cleared.', 'info');
   logEl.style.display = 'none';
   logEl.innerHTML = '';
+  setStatus('Cleared.', 'info');
 });
 
+// ── Rename ────────────────────────────────────────────────────────────────────
 btnRename.addEventListener('click', async () => {
   const entries = parseList(listEl.value);
-  if (entries.length === 0) {
-    setStatus('❌ No valid entries found.', 'err');
+  if (!entries.length) {
+    setStatus('❌ No valid entries. Make sure to use SteamID64 (17 digits).', 'err');
     return;
   }
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url?.includes('steamcommunity.com')) {
-    setStatus('❌ Please open a Steam page first (steamcommunity.com).', 'err');
+    setStatus('❌ Open any steamcommunity.com page first, then try again.', 'err');
     return;
   }
 
@@ -48,34 +135,41 @@ btnRename.addEventListener('click', async () => {
       addLog(`✅ ${steamId} → ${nickname}`, 'ok');
     } else {
       fail++;
-      addLog(`❌ ${steamId} → ${nickname}  (${result?.error ?? 'unknown error'})`, 'err');
+      addLog(`❌ ${steamId} — ${result?.error ?? 'unknown error'}`, 'err');
     }
-    // Small delay to avoid hammering Steam's API
     await sleep(400);
   }
 
-  setStatus(`Done — ✅ ${ok} renamed, ❌ ${fail} failed.`, ok > 0 ? 'ok' : 'err');
+  setStatus(`Done — ✅ ${ok} renamed  ❌ ${fail} failed`, ok > 0 ? 'ok' : 'err');
   btnRename.disabled = false;
 });
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function extractSteamId(steamUrl) {
+  const m = steamUrl.match(/profiles\/(\d{17})/);
+  return m ? m[1] : null;
+}
 
 function parseList(raw) {
   return raw
     .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#'))
-    .map((line) => {
-      const sep = line.includes('|') ? '|' : ',';
-      const [id, ...rest] = line.split(sep);
-      const steamId = id.trim();
-      const nickname = rest.join(sep).trim();
-      if (!steamId || !nickname) return null;
-      // Must be a 17-digit SteamID64
-      if (!/^\d{17}$/.test(steamId)) return null;
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => {
+      const [id, ...rest] = l.split('|');
+      const steamId  = id.trim();
+      const nickname = rest.join('|').trim();
+      if (!/^\d{17}$/.test(steamId) || !nickname) return null;
       return { steamId, nickname };
     })
     .filter(Boolean);
+}
+
+function getSettings() {
+  return new Promise((resolve) =>
+    chrome.storage.local.get(['apiUrl', 'apiKey', 'prefix'], resolve),
+  );
 }
 
 function setStatus(msg, cls) {
