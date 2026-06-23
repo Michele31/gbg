@@ -175,18 +175,21 @@ async function steamSetNickname(steamId, nickname) {
   }
 
   try {
-    const res = await fetch('https://steamcommunity.com/actions/SetNickname', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-Requested-With': 'XMLHttpRequest',
+    // The friend's SteamID64 goes in the URL path; body carries nickname + sessionid
+    const res = await fetch(
+      `https://steamcommunity.com/profiles/${steamId}/ajaxsetnickname/`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body:
+          `nickname=${encodeURIComponent(nickname)}` +
+          `&sessionid=${encodeURIComponent(sessionid)}`,
       },
-      body:
-        `sessionid=${encodeURIComponent(sessionid)}` +
-        `&steamid=${encodeURIComponent(steamId)}` +
-        `&nickname=${encodeURIComponent(nickname)}`,
-    });
+    );
 
     const text = await res.text();
 
@@ -194,8 +197,14 @@ async function steamSetNickname(steamId, nickname) {
       return { ok: false, error: `HTTP ${res.status} — ${text.slice(0, 120).replace(/\s+/g, ' ')}` };
     }
 
-    // Steam returns the new nickname (or empty) on success, sometimes JSON
-    return { ok: true };
+    // Success returns JSON like {"success":1,"nickname":"..."}
+    try {
+      const json = JSON.parse(text);
+      if (json.success === 1 || json.success === undefined) return { ok: true };
+      return { ok: false, error: `Steam success=${json.success}` };
+    } catch {
+      return { ok: true };
+    }
   } catch (e) {
     return { ok: false, error: String(e) };
   }
