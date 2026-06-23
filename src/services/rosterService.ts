@@ -64,7 +64,7 @@ export async function sendJoinNotification(
     const embed = new EmbedBuilder()
       .setColor(0x57f287)
       .setTitle(`📥 ${user.username.toUpperCase()} HAS JOINED GBG`)
-      .setDescription('Be sure to **add him** on Steam!')
+      .setDescription('Be sure to **add him and rename him** on Steam!')
       .setThumbnail(user.displayAvatarURL({ size: 256 }))
       .addFields(
         { name: 'Discord', value: `<@${user.id}>`, inline: true },
