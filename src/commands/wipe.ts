@@ -5,11 +5,13 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  EmbedBuilder,
+  ColorResolvable,
 } from 'discord.js';
 import { config } from '../config';
 import { hasWipePermission } from '../utils/permissions';
 import { buildWipeEmbed } from '../utils/embeds';
-import { createWipe, updateWipeMessageId } from '../services/wipeService';
+import { createWipe } from '../services/wipeService';
 import { logger } from '../utils/logger';
 
 export const data = new SlashCommandBuilder()
@@ -44,10 +46,19 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const serverName = interaction.options.getString('server') ?? config.serverName;
   const notes = interaction.options.getString('notes') ?? undefined;
 
+  await interaction.reply({ content: '✅ Wipe announcement created!', ephemeral: true });
+
+  // Send a placeholder message first to get the real message ID
+  const channel = interaction.channel as TextChannel;
+  const pingContent = config.teamRoleId ? `<@&${config.teamRoleId}>` : undefined;
+
+  const placeholder = await channel.send({ content: pingContent ?? '⏳ Setting up wipe...' });
+
+  // Now save to DB with the real message ID
   const wipe = createWipe({
     guild_id: interaction.guildId,
     channel_id: interaction.channelId,
-    message_id: 'pending',
+    message_id: placeholder.id,
     wipe_date: wipeDate,
     wipe_time: wipeTime,
     server_name: serverName,
@@ -56,16 +67,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     created_by_tag: interaction.user.username,
   });
 
+  // Edit the placeholder with the real embed + buttons
   const embed = buildWipeEmbed(wipe);
   const row = buildAttendanceRow(wipe.id);
-
-  await interaction.reply({ content: '✅ Wipe announcement created!', ephemeral: true });
-
-  const channel = interaction.channel as TextChannel;
-  const pingContent = config.teamRoleId ? `<@&${config.teamRoleId}>` : undefined;
-  const message = await channel.send({ content: pingContent, embeds: [embed], components: [row] });
-
-  updateWipeMessageId(wipe.id, message.id);
+  await placeholder.edit({ content: pingContent ?? null, embeds: [embed], components: [row] });
 
   logger.info(`Wipe #${wipe.id} created by ${interaction.user.username} in guild ${interaction.guildId}`);
 }

@@ -30,7 +30,7 @@ function runMigrations(db: Database.Database): void {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id    TEXT    NOT NULL,
       channel_id  TEXT    NOT NULL,
-      message_id  TEXT    NOT NULL UNIQUE,
+      message_id  TEXT    NOT NULL,
       wipe_date   TEXT    NOT NULL,
       wipe_time   TEXT    NOT NULL,
       server_name TEXT    NOT NULL,
