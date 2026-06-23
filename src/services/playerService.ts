@@ -35,3 +35,9 @@ export function getAllPlayers(): PlayerRow[] {
 export function deletePlayer(userId: string): void {
   getDb().prepare('DELETE FROM players WHERE user_id = ?').run(userId);
 }
+
+export function updatePlayerUsername(userId: string, username: string): void {
+  getDb()
+    .prepare(`UPDATE players SET username = ?, updated_at = datetime('now') WHERE user_id = ?`)
+    .run(username, userId);
+}
