@@ -2,6 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ColorRe
 import { upsertPlayer, getPlayer } from '../services/playerService';
 import { refreshRoster, sendJoinNotification } from '../services/rosterService';
 import { hasWipePermission } from '../utils/permissions';
+import { getDisplayName } from '../utils/display';
 import { config } from '../config';
 
 function normaliseSteam(input: string): string {
@@ -43,20 +44,22 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 
   const target = interaction.options.getUser('user', true);
+  const targetMember = interaction.options.getMember('user');
   const steam = normaliseSteam(interaction.options.getString('steam', true));
   const bm = normaliseBm(interaction.options.getString('bm', true));
   const isUpdate = !!getPlayer(target.id);
+  const displayName = getDisplayName(targetMember, target);
 
   upsertPlayer({
     user_id: target.id,
-    username: target.username,
+    username: displayName,
     steam,
     bm,
   });
 
   const embed = new EmbedBuilder()
     .setColor(`#${config.embedColor}` as ColorResolvable)
-    .setTitle(isUpdate ? `✏️ ${target.username}'s Profile Updated` : `✅ ${target.username} Registered!`)
+    .setTitle(isUpdate ? `✏️ ${displayName}'s Profile Updated` : `✅ ${displayName} Registered!`)
     .setThumbnail(target.displayAvatarURL())
     .addFields(
       { name: 'Discord', value: `<@${target.id}>`, inline: true },
@@ -71,6 +74,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   await refreshRoster(interaction.client);
 
   if (!isUpdate) {
-    await sendJoinNotification(interaction.client, target, steam);
+    await sendJoinNotification(interaction.client, target, displayName, steam);
   }
 }

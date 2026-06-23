@@ -18,6 +18,7 @@ import {
 import { buildWipeEmbed } from '../utils/embeds';
 import { buildAttendanceRow } from '../commands/wipe';
 import { hasWipePermission } from '../utils/permissions';
+import { getDisplayName } from '../utils/display';
 import { logger } from '../utils/logger';
 import { AttendanceStatus } from '../database/types';
 
@@ -115,7 +116,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
       upsertAttendance({
         wipe_id: wipeId,
         user_id: interaction.user.id,
-        username: interaction.user.username,
+        username: getDisplayName(interaction.member, interaction.user),
         status,
       });
 

@@ -55,6 +55,7 @@ export async function refreshRoster(client: Client): Promise<void> {
 export async function sendJoinNotification(
   client: Client,
   user: User,
+  displayName: string,
   steam: string,
 ): Promise<void> {
   try {
@@ -63,7 +64,7 @@ export async function sendJoinNotification(
 
     const embed = new EmbedBuilder()
       .setColor(0x57f287)
-      .setTitle(`📥 ${user.username.toUpperCase()} HAS JOINED GBG`)
+      .setTitle(`📥 ${displayName.toUpperCase()} HAS JOINED GBG`)
       .setDescription('Be sure to **add him and rename him** on Steam!')
       .setThumbnail(user.displayAvatarURL({ size: 256 }))
       .addFields(
@@ -81,6 +82,7 @@ export async function sendJoinNotification(
 export async function sendLeaveNotification(
   client: Client,
   user: User,
+  displayName: string,
   steam: string,
 ): Promise<void> {
   try {
@@ -89,7 +91,7 @@ export async function sendLeaveNotification(
 
     const embed = new EmbedBuilder()
       .setColor(0xed4245)
-      .setTitle(`📤 ${user.username.toUpperCase()} HAS LEFT GBG`)
+      .setTitle(`📤 ${displayName.toUpperCase()} HAS LEFT GBG`)
       .setDescription('Be sure to **unfriend / rename** him!')
       .setThumbnail(user.displayAvatarURL({ size: 256 }))
       .addFields(

@@ -31,11 +31,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 
   const steam = player.steam;
+  const displayName = player.username; // stored display name
   deletePlayer(target.id);
-  logger.info(`${target.username} unregistered by ${interaction.user.username}`);
+  logger.info(`${displayName} unregistered by ${interaction.user.username}`);
 
   await interaction.reply({ content: `✅ <@${target.id}> has been removed from the roster.`, ephemeral: true });
 
   await refreshRoster(interaction.client);
-  await sendLeaveNotification(interaction.client, target, steam);
+  await sendLeaveNotification(interaction.client, target, displayName, steam);
 }

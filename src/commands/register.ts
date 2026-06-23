@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ColorResolvable } from 'discord.js';
 import { upsertPlayer, getPlayer } from '../services/playerService';
 import { refreshRoster, sendJoinNotification } from '../services/rosterService';
+import { getDisplayName } from '../utils/display';
 import { config } from '../config';
 
 function normaliseSteam(input: string): string {
@@ -31,10 +32,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const steam = normaliseSteam(interaction.options.getString('steam', true));
   const bm = normaliseBm(interaction.options.getString('bm', true));
   const isUpdate = !!getPlayer(interaction.user.id);
+  const displayName = getDisplayName(interaction.member, interaction.user);
 
   upsertPlayer({
     user_id: interaction.user.id,
-    username: interaction.user.username,
+    username: displayName,
     steam,
     bm,
   });
@@ -58,6 +60,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   // Send join notification only on first registration, not updates
   if (!isUpdate) {
-    await sendJoinNotification(interaction.client, interaction.user, steam);
+    await sendJoinNotification(interaction.client, interaction.user, displayName, steam);
   }
 }

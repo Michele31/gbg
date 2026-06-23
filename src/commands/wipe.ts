@@ -12,6 +12,7 @@ import { config } from '../config';
 import { hasWipePermission } from '../utils/permissions';
 import { buildWipeEmbed } from '../utils/embeds';
 import { createWipe } from '../services/wipeService';
+import { getDisplayName } from '../utils/display';
 import { logger } from '../utils/logger';
 
 export const data = new SlashCommandBuilder()
@@ -64,7 +65,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     server_name: serverName,
     notes,
     created_by: interaction.user.id,
-    created_by_tag: interaction.user.username,
+    created_by_tag: getDisplayName(interaction.member, interaction.user),
   });
 
   // Edit the placeholder with the real embed + buttons
