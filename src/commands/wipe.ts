@@ -95,10 +95,5 @@ export function buildAttendanceRow(wipeId: number, disabled = false): ActionRowB
       .setEmoji('🕐')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(disabled),
-    new ButtonBuilder()
-      .setCustomId(`closewipe:${wipeId}`)
-      .setEmoji('⚙️')
-      .setStyle(ButtonStyle.Primary)
-      .setDisabled(disabled),
   );
 }
