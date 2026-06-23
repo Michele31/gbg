@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "GBG Steam Bulk Renamer",
+  "version": "1.0.0",
+  "description": "Bulk rename Steam friends from a custom nickname list",
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": [
+    "https://steamcommunity.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://steamcommunity.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
