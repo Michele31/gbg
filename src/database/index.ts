@@ -66,4 +66,20 @@ function runMigrations(db: Database.Database): void {
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // Incremental migrations for existing databases
+  addColumnIfMissing(db, 'players', 'steamid64', 'TEXT');
+}
+
+function addColumnIfMissing(
+  db: Database.Database,
+  table: string,
+  column: string,
+  type: string,
+): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    logger.info(`Migration: added column ${table}.${column}`);
+  }
 }

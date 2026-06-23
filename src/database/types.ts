@@ -20,6 +20,7 @@ export interface PlayerRow {
   username: string;
   steam: string;
   bm: string;
+  steamid64: string | null;
   registered_at: string;
   updated_at: string;
 }

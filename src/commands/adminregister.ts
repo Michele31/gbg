@@ -3,6 +3,7 @@ import { upsertPlayer, getPlayer } from '../services/playerService';
 import { refreshRoster, sendJoinNotification } from '../services/rosterService';
 import { hasWipePermission } from '../utils/permissions';
 import { getDisplayName } from '../utils/display';
+import { resolveSteamId64 } from '../services/steamResolver';
 import { config } from '../config';
 
 function normaliseSteam(input: string): string {
@@ -49,12 +50,14 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const bm = normaliseBm(interaction.options.getString('bm', true));
   const isUpdate = !!getPlayer(target.id);
   const displayName = getDisplayName(targetMember, target);
+  const steamid64 = await resolveSteamId64(steam);
 
   upsertPlayer({
     user_id: target.id,
     username: displayName,
     steam,
     bm,
+    steamid64,
   });
 
   const embed = new EmbedBuilder()

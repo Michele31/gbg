@@ -75,7 +75,8 @@ btnFetch.addEventListener('click', async () => {
     const skipped = [];
 
     for (const p of players) {
-      const id = extractSteamId(p.steam);
+      // Prefer the resolved steamid64 from the bot; fall back to parsing the URL
+      const id = p.steamid64 || extractSteamId(p.steam);
       const nick = (prefix ?? 'GBG.') + p.username;
       if (id) {
         lines.push(`${id} | ${nick}`);

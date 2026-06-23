@@ -2,6 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ColorRe
 import { upsertPlayer, getPlayer } from '../services/playerService';
 import { refreshRoster, sendJoinNotification } from '../services/rosterService';
 import { getDisplayName } from '../utils/display';
+import { resolveSteamId64 } from '../services/steamResolver';
 import { config } from '../config';
 
 function normaliseSteam(input: string): string {
@@ -33,12 +34,14 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const bm = normaliseBm(interaction.options.getString('bm', true));
   const isUpdate = !!getPlayer(interaction.user.id);
   const displayName = getDisplayName(interaction.member, interaction.user);
+  const steamid64 = await resolveSteamId64(steam);
 
   upsertPlayer({
     user_id: interaction.user.id,
     username: displayName,
     steam,
     bm,
+    steamid64,
   });
 
   const embed = new EmbedBuilder()

@@ -2,6 +2,14 @@ import http from 'http';
 import { getAllPlayers } from './services/playerService';
 import { logger } from './utils/logger';
 
+/** Extracts a SteamID64 from a /profiles/ URL, else returns null */
+function extractSteamId64(steam: string): string | null {
+  const m = steam.match(/profiles\/(\d{17})/);
+  if (m) return m[1];
+  if (/^\d{17}$/.test(steam)) return steam;
+  return null;
+}
+
 const API_KEY = process.env.API_KEY ?? '';
 // Railway assigns the public-facing port via PORT — prefer it, fall back to API_PORT
 const PORT    = parseInt(process.env.PORT ?? process.env.API_PORT ?? '3000', 10);
@@ -30,6 +38,7 @@ export function startApi(): void {
         discordId:  p.user_id,
         username:   p.username,
         steam:      p.steam,
+        steamid64:  p.steamid64 ?? extractSteamId64(p.steam),
         bm:         p.bm,
       }));
 
