@@ -22,6 +22,9 @@ export const data = new SlashCommandBuilder()
     o.setName('time').setDescription('Wipe time (e.g. 19:00)').setRequired(true),
   )
   .addStringOption((o) =>
+    o.setName('server').setDescription('Server name (overrides default)').setRequired(false),
+  )
+  .addStringOption((o) =>
     o.setName('notes').setDescription('Optional notes').setRequired(false),
   );
 
@@ -38,6 +41,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   const wipeDate = interaction.options.getString('date', true);
   const wipeTime = interaction.options.getString('time', true);
+  const serverName = interaction.options.getString('server') ?? config.serverName;
   const notes = interaction.options.getString('notes') ?? undefined;
 
   const wipe = createWipe({
@@ -46,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     message_id: 'pending',
     wipe_date: wipeDate,
     wipe_time: wipeTime,
-    server_name: config.serverName,
+    server_name: serverName,
     notes,
     created_by: interaction.user.id,
     created_by_tag: interaction.user.username,
