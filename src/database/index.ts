@@ -51,5 +51,14 @@ function runMigrations(db: Database.Database): void {
       updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
       UNIQUE(wipe_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS players (
+      user_id     TEXT PRIMARY KEY,
+      username    TEXT NOT NULL,
+      steam       TEXT NOT NULL,
+      bm          TEXT NOT NULL,
+      registered_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }

@@ -15,6 +15,15 @@ export interface WipeRow {
   created_at: string;
 }
 
+export interface PlayerRow {
+  user_id: string;
+  username: string;
+  steam: string;
+  bm: string;
+  registered_at: string;
+  updated_at: string;
+}
+
 export interface AttendanceRow {
   id: number;
   wipe_id: number;
