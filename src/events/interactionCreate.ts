@@ -4,9 +4,10 @@ import {
   Interaction,
   ButtonInteraction,
   TextChannel,
+  MessageFlags,
 } from 'discord.js';
 import { commands } from '../commands';
-import { handleVipButton, askVip } from '../services/vipService';
+import { handleVipButton, buildVipRow } from '../services/vipService';
 import {
   upsertAttendance,
   removeAttendance,
@@ -109,7 +110,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
     if (existing && existing.status === status) {
       removeAttendance(wipeId, interaction.user.id);
-      await interaction.reply({ content: '↩️ Removed your attendance.', ephemeral: true });
+      await interaction.reply({ content: '↩️ Removed your attendance.', flags: MessageFlags.Ephemeral });
     } else {
       upsertAttendance({
         wipe_id: wipeId,
@@ -119,11 +120,16 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
       });
 
       const label = status === 'yes' ? '✅ Accepted' : status === 'no' ? '❌ Declined' : '🕐 Late';
-      await interaction.reply({ content: `${label} — recorded!`, ephemeral: true });
 
       if (status === 'yes' || status === 'late') {
-        const channel = interaction.channel as TextChannel | null;
-        if (channel) await askVip(interaction.user, wipeId, channel);
+        // Show VIP popup as ephemeral follow-up
+        await interaction.reply({
+          content: `${label}! **Will you have VIP for this wipe?**`,
+          components: [buildVipRow(wipeId)],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else {
+        await interaction.reply({ content: `${label} — recorded!`, flags: MessageFlags.Ephemeral });
       }
     }
 

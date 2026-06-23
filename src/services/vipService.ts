@@ -1,51 +1,21 @@
 import {
-  User,
-  TextChannel,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ButtonInteraction,
-  MessageFlags,
+  TextChannel,
 } from 'discord.js';
-import { setVip } from './wipeService';
+import { setVip, getWipeById } from './wipeService';
+import { buildWipeEmbed } from '../utils/embeds';
+import { buildAttendanceRow } from '../commands/wipe';
 import { logger } from '../utils/logger';
 
-/**
- * Sends a VIP question to the user via DM.
- * Falls back to a channel mention if DMs are closed.
- */
-export async function askVip(
-  user: User,
-  wipeId: number,
-  fallbackChannel: TextChannel,
-): Promise<void> {
-  const row = buildVipRow(wipeId);
-
-  try {
-    await user.send({
-      content: '🎮 **Will you have VIP for this wipe?**',
-      components: [row],
-    });
-  } catch {
-    // DMs disabled — fall back to channel mention
-    try {
-      await fallbackChannel.send({
-        content:
-          `<@${user.id}> Your DMs are disabled! Please answer: **Will you have VIP?**`,
-        components: [row],
-      });
-    } catch (err) {
-      logger.error(`Failed to send VIP fallback message for user ${user.id}:`, err);
-    }
-  }
-}
-
-function buildVipRow(wipeId: number): ActionRowBuilder<ButtonBuilder> {
+export function buildVipRow(wipeId: number): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`vip:yes:${wipeId}`)
       .setLabel('Yes, I have VIP')
-      .setEmoji('✅')
+      .setEmoji('👑')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(`vip:no:${wipeId}`)
@@ -56,19 +26,33 @@ function buildVipRow(wipeId: number): ActionRowBuilder<ButtonBuilder> {
 }
 
 export async function handleVipButton(interaction: ButtonInteraction): Promise<void> {
-  // customId format: vip:<yes|no>:<wipeId>
   const [, answer, wipeIdStr] = interaction.customId.split(':');
   const wipeId = parseInt(wipeIdStr, 10);
   const hasVip = answer === 'yes';
 
   setVip(wipeId, interaction.user.id, hasVip);
 
+  // Dismiss the VIP popup
   await interaction.update({
-    content: hasVip
-      ? '✅ Got it — you have VIP!'
-      : '❌ Got it — no VIP for this wipe.',
+    content: hasVip ? '👑 VIP confirmed!' : '✅ Got it — no VIP.',
     components: [],
   });
 
-  logger.info(`VIP answered by ${interaction.user.tag}: ${hasVip} for wipe #${wipeId}`);
+  // Refresh the wipe embed so VIP count updates live
+  const wipe = getWipeById(wipeId);
+  if (!wipe) return;
+
+  try {
+    const channel = interaction.client.channels.cache.get(wipe.channel_id) as TextChannel | undefined;
+    if (!channel) return;
+    const message = await channel.messages.fetch(wipe.message_id);
+    await message.edit({
+      embeds: [buildWipeEmbed(wipe)],
+      components: [buildAttendanceRow(wipeId, wipe.closed === 1)],
+    });
+  } catch (err) {
+    logger.warn('Could not refresh wipe embed after VIP answer:', err);
+  }
+
+  logger.info(`VIP answered by ${interaction.user.username}: ${hasVip} for wipe #${wipeId}`);
 }

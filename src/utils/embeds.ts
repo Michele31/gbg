@@ -3,12 +3,10 @@ import { WipeRow, AttendanceRow } from '../database/types';
 import { config } from '../config';
 import { getAllAttendance, getAttendanceCounts } from '../services/wipeService';
 
-/** Returns "in X days" / "today" / "X days ago" relative to now */
 function relativeDate(dateStr: string, timeStr: string): string {
   const combined = new Date(`${dateStr}T${timeStr.replace(/[^0-9:]/g, '').slice(0, 5)}:00`);
   if (isNaN(combined.getTime())) return '';
-  const diffMs = combined.getTime() - Date.now();
-  const diffDays = Math.round(diffMs / 86_400_000);
+  const diffDays = Math.round((combined.getTime() - Date.now()) / 86_400_000);
   if (diffDays === 0) return 'today';
   if (diffDays === 1) return 'in 1 day';
   if (diffDays > 1) return `in ${diffDays} days`;
@@ -34,28 +32,30 @@ export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
     .addFields(
       {
         name: 'Date & Time',
-        value: [
-          `${wipe.wipe_date} ${wipe.wipe_time}`,
-          rel ? rel : '',
-          `(Timezone: ${config.timezone})`,
-        ]
+        value: [`${wipe.wipe_date} ${wipe.wipe_time}`, rel, `(Timezone: ${config.timezone})`]
           .filter(Boolean)
           .join('\n'),
         inline: false,
       },
       {
-        name: `✅ Accepted (${counts.yes})`,
+        name: `✅ Yes (${counts.yes})`,
         value: formatNames(rows, 'yes'),
         inline: true,
       },
       {
-        name: `❌ Declined (${counts.no})`,
-        value: formatNames(rows, 'no'),
+        name: `👑 VIP (${counts.vip})`,
+        value:
+          rows.filter((r) => r.vip === 1).map((r) => `<@${r.user_id}>`).join('\n') || 'None',
         inline: true,
       },
       {
         name: `🕐 Late (${counts.late})`,
         value: formatNames(rows, 'late'),
+        inline: true,
+      },
+      {
+        name: `❌ No (${counts.no})`,
+        value: formatNames(rows, 'no'),
         inline: true,
       },
     )
@@ -64,9 +64,7 @@ export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
     })
     .setTimestamp();
 
-  if (wipe.notes) {
-    embed.setDescription(`📌 ${wipe.notes}`);
-  }
+  if (wipe.notes) embed.setDescription(`📌 ${wipe.notes}`);
 
   return embed;
 }
@@ -79,21 +77,14 @@ export function buildAttendanceEmbed(wipe: WipeRow, rows: AttendanceRow[]): Embe
     .setColor(color)
     .setTitle(`📋 Attendance — ${wipe.server_name}`)
     .addFields(
+      { name: `✅ Yes (${counts.yes})`, value: formatNames(rows, 'yes'), inline: true },
       {
-        name: `✅ Accepted (${counts.yes})`,
-        value: formatNames(rows, 'yes'),
+        name: `👑 VIP (${counts.vip})`,
+        value: rows.filter((r) => r.vip === 1).map((r) => `<@${r.user_id}>`).join('\n') || 'None',
         inline: true,
       },
-      {
-        name: `❌ Declined (${counts.no})`,
-        value: formatNames(rows, 'no'),
-        inline: true,
-      },
-      {
-        name: `🕐 Late (${counts.late})`,
-        value: formatNames(rows, 'late'),
-        inline: true,
-      },
+      { name: `🕐 Late (${counts.late})`, value: formatNames(rows, 'late'), inline: true },
+      { name: `❌ No (${counts.no})`, value: formatNames(rows, 'no'), inline: true },
     )
     .setFooter({ text: `Total: ${rows.length}  •  ${wipe.wipe_date} ${wipe.wipe_time}` })
     .setTimestamp();

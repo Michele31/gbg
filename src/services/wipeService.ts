@@ -93,12 +93,16 @@ export function getAllAttendance(wipeId: number): AttendanceRow[] {
     .all(wipeId) as AttendanceRow[];
 }
 
-export function getAttendanceCounts(wipeId: number): { yes: number; no: number; late: number } {
+export function getAttendanceCounts(wipeId: number): { yes: number; vip: number; no: number; late: number } {
   const rows = getDb()
     .prepare(`SELECT status, COUNT(*) as cnt FROM attendance WHERE wipe_id = ? GROUP BY status`)
     .all(wipeId) as { status: string; cnt: number }[];
 
-  const counts = { yes: 0, no: 0, late: 0 };
+  const vipCount = (getDb()
+    .prepare(`SELECT COUNT(*) as cnt FROM attendance WHERE wipe_id = ? AND vip = 1`)
+    .get(wipeId) as { cnt: number }).cnt;
+
+  const counts = { yes: 0, vip: vipCount, no: 0, late: 0 };
   for (const row of rows) {
     if (row.status === 'yes') counts.yes = row.cnt;
     else if (row.status === 'no') counts.no = row.cnt;
