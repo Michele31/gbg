@@ -129,7 +129,19 @@ btnRename.addEventListener('click', async () => {
   let ok = 0, fail = 0;
 
   for (const { steamId, nickname } of entries) {
-    const result = await chrome.tabs.sendMessage(tab.id, { type: 'RENAME', steamId, nickname });
+    let result;
+    try {
+      const [injection] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        world: 'MAIN',
+        func: steamSetNickname,
+        args: [steamId, nickname],
+      });
+      result = injection.result;
+    } catch (e) {
+      result = { ok: false, error: String(e) };
+    }
+
     if (result?.ok) {
       ok++;
       addLog(`✅ ${steamId} → ${nickname}`, 'ok');
@@ -137,12 +149,57 @@ btnRename.addEventListener('click', async () => {
       fail++;
       addLog(`❌ ${steamId} — ${result?.error ?? 'unknown error'}`, 'err');
     }
-    await sleep(400);
+    await sleep(500);
   }
 
   setStatus(`Done — ✅ ${ok} renamed  ❌ ${fail} failed`, ok > 0 ? 'ok' : 'err');
   btnRename.disabled = false;
 });
+
+/**
+ * Runs in the Steam page's MAIN world, so it has access to Steam's own
+ * g_sessionID global and shares the exact request context of the site UI.
+ */
+async function steamSetNickname(steamId, nickname) {
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  // Prefer Steam's own session token; fall back to the cookie
+  const sessionid =
+    (typeof window.g_sessionID !== 'undefined' && window.g_sessionID) || getCookie('sessionid');
+
+  if (!sessionid) {
+    return { ok: false, error: 'No session — are you logged in to steamcommunity.com?' };
+  }
+
+  try {
+    const res = await fetch('https://steamcommunity.com/actions/SetNickname', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body:
+        `sessionid=${encodeURIComponent(sessionid)}` +
+        `&steamid=${encodeURIComponent(steamId)}` +
+        `&nickname=${encodeURIComponent(nickname)}`,
+    });
+
+    const text = await res.text();
+
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status} — ${text.slice(0, 120).replace(/\s+/g, ' ')}` };
+    }
+
+    // Steam returns the new nickname (or empty) on success, sometimes JSON
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
