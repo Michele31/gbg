@@ -5,6 +5,7 @@ import { registerEvents } from './events';
 import { logger } from './utils/logger';
 
 async function main(): Promise<void> {
+  logger.info(`DATABASE_PATH = ${config.databasePath}`);
   initDatabase();
 
   const client = new Client({
