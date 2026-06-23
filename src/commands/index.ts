@@ -11,13 +11,14 @@ import * as closewipe from './closewipe';
 import * as remind from './remind';
 import * as register from './register';
 import * as profile from './profile';
+import * as code from './code';
 
 export interface Command {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
 }
 
-const commandList: Command[] = [wipe, attendance, exportCmd, closewipe, remind, register, profile];
+const commandList: Command[] = [wipe, attendance, exportCmd, closewipe, remind, register, profile, code];
 
 export const commands = new Collection<string, Command>(
   commandList.map((cmd) => [cmd.data.name, cmd]),
