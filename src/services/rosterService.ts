@@ -1,4 +1,4 @@
-import { Client, EmbedBuilder, ColorResolvable, TextChannel } from 'discord.js';
+import { Client, EmbedBuilder, ColorResolvable, TextChannel, User } from 'discord.js';
 import { getAllPlayers } from './playerService';
 import { getSetting } from './settingsService';
 import { config } from '../config';
@@ -37,7 +37,6 @@ export function buildRosterEmbeds(): EmbedBuilder[] {
   return embeds;
 }
 
-/** Edits the pinned roster message, if one exists. */
 export async function refreshRoster(client: Client): Promise<void> {
   const stored = getSetting('roster_message');
   if (!stored) return;
@@ -46,7 +45,6 @@ export async function refreshRoster(client: Client): Promise<void> {
     const [channelId, messageId] = stored.split(':');
     const channel = await client.channels.fetch(channelId) as TextChannel | null;
     if (!channel) return;
-
     const message = await channel.messages.fetch(messageId);
     await message.edit({ embeds: buildRosterEmbeds() });
   } catch (err) {
@@ -54,13 +52,54 @@ export async function refreshRoster(client: Client): Promise<void> {
   }
 }
 
-/** Sends a join notification to the configured channel. */
-export async function sendJoinNotification(client: Client, username: string, userId: string): Promise<void> {
+export async function sendJoinNotification(
+  client: Client,
+  user: User,
+  steam: string,
+): Promise<void> {
   try {
     const channel = await client.channels.fetch(config.joinNotificationChannelId) as TextChannel | null;
     if (!channel) return;
-    await channel.send(`📢 **@${username.toUpperCase()} HAS JOINED GBG — BE SURE TO ADD HIM** <@${userId}>`);
+
+    const embed = new EmbedBuilder()
+      .setColor(0x57f287)
+      .setTitle(`📥 ${user.username.toUpperCase()} HAS JOINED GBG`)
+      .setDescription('Be sure to **add him** on Steam!')
+      .setThumbnail(user.displayAvatarURL({ size: 256 }))
+      .addFields(
+        { name: 'Discord', value: `<@${user.id}>`, inline: true },
+        { name: 'Steam', value: `[Profile](${steam})`, inline: true },
+      )
+      .setTimestamp();
+
+    await channel.send({ embeds: [embed] });
   } catch (err) {
     logger.warn('Could not send join notification:', err);
+  }
+}
+
+export async function sendLeaveNotification(
+  client: Client,
+  user: User,
+  steam: string,
+): Promise<void> {
+  try {
+    const channel = await client.channels.fetch(config.joinNotificationChannelId) as TextChannel | null;
+    if (!channel) return;
+
+    const embed = new EmbedBuilder()
+      .setColor(0xed4245)
+      .setTitle(`📤 ${user.username.toUpperCase()} HAS LEFT GBG`)
+      .setDescription('Be sure to **unfriend / rename** him!')
+      .setThumbnail(user.displayAvatarURL({ size: 256 }))
+      .addFields(
+        { name: 'Discord', value: `<@${user.id}>`, inline: true },
+        { name: 'Steam', value: `[Profile](${steam})`, inline: true },
+      )
+      .setTimestamp();
+
+    await channel.send({ embeds: [embed] });
+  } catch (err) {
+    logger.warn('Could not send leave notification:', err);
   }
 }

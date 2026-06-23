@@ -1,8 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { getPlayer, deletePlayer } from '../services/playerService';
-import { refreshRoster } from '../services/rosterService';
+import { refreshRoster, sendLeaveNotification } from '../services/rosterService';
 import { hasWipePermission } from '../utils/permissions';
-import { config } from '../config';
 import { logger } from '../utils/logger';
 
 export const data = new SlashCommandBuilder()
@@ -31,21 +30,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return;
   }
 
+  const steam = player.steam;
   deletePlayer(target.id);
   logger.info(`${target.username} unregistered by ${interaction.user.username}`);
 
   await interaction.reply({ content: `✅ <@${target.id}> has been removed from the roster.`, ephemeral: true });
 
-  // Refresh the live roster embed
   await refreshRoster(interaction.client);
-
-  // Send leave notification
-  try {
-    const channel = await interaction.client.channels.fetch(config.joinNotificationChannelId) as import('discord.js').TextChannel | null;
-    if (channel) {
-      await channel.send(`📢 **@${player.username.toUpperCase()} HAS LEFT GBG — BE SURE TO UNFRIEND/RENAME** <@${target.id}>`);
-    }
-  } catch (err) {
-    logger.warn('Could not send leave notification:', err);
-  }
+  await sendLeaveNotification(interaction.client, target, steam);
 }

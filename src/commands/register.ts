@@ -58,6 +58,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   // Send join notification only on first registration, not updates
   if (!isUpdate) {
-    await sendJoinNotification(interaction.client, interaction.user.username, interaction.user.id);
+    await sendJoinNotification(interaction.client, interaction.user, steam);
   }
 }
