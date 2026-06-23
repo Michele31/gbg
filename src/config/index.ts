@@ -24,4 +24,5 @@ export const config = {
   serverName: process.env.SERVER_NAME ?? 'Rusticated EU Main',
   timezone: process.env.TIMEZONE ?? 'UTC',
   databasePath: process.env.DATABASE_PATH ?? './data/bot.db',
+  joinNotificationChannelId: process.env.JOIN_NOTIFICATION_CHANNEL_ID ?? '1518998258171511017',
 } as const;

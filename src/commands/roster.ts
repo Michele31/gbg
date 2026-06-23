@@ -1,37 +1,41 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ColorResolvable } from 'discord.js';
-import { getAllPlayers } from '../services/playerService';
-import { config } from '../config';
+import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel } from 'discord.js';
+import { buildRosterEmbeds } from '../services/rosterService';
+import { setSetting, getSetting } from '../services/settingsService';
+import { hasWipePermission } from '../utils/permissions';
 
 export const data = new SlashCommandBuilder()
   .setName('roster')
-  .setDescription('Show all registered clan members');
+  .setDescription('Post (or refresh) the live clan roster embed');
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  const players = getAllPlayers();
-
-  if (players.length === 0) {
-    await interaction.reply({ content: '❌ No members registered yet. Use `/register` to add yourself.', ephemeral: true });
+  if (!interaction.inCachedGuild()) {
+    await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
     return;
   }
 
-  const lines = players.map((p) =>
-    `**${p.username.toUpperCase()}**\n[Steam](${p.steam}) • [BattleMetrics](${p.bm})`,
-  );
+  const embeds = buildRosterEmbeds();
+  const stored = getSetting('roster_message');
 
-  // Split into chunks of 10 to avoid hitting embed limits
-  const chunkSize = 10;
-  const chunks: string[][] = [];
-  for (let i = 0; i < lines.length; i += chunkSize) {
-    chunks.push(lines.slice(i, i + chunkSize));
+  // Try to edit existing roster message first
+  if (stored) {
+    try {
+      const [channelId, messageId] = stored.split(':');
+      const channel = interaction.guild.channels.cache.get(channelId) as TextChannel | undefined;
+      if (channel) {
+        const msg = await channel.messages.fetch(messageId);
+        await msg.edit({ embeds });
+        await interaction.reply({ content: `✅ Roster refreshed in <#${channelId}>.`, ephemeral: true });
+        return;
+      }
+    } catch {
+      // Message no longer exists — post a new one
+    }
   }
 
-  const embeds = chunks.map((chunk, i) =>
-    new EmbedBuilder()
-      .setColor(`#${config.embedColor}` as ColorResolvable)
-      .setTitle(i === 0 ? `👥 Clan Roster — ${players.length} members` : '​')
-      .setDescription(chunk.join('\n\n'))
-      .setTimestamp(i === chunks.length - 1 ? new Date() : undefined),
-  );
+  // Post a new roster message in the current channel
+  const channel = interaction.channel as TextChannel;
+  const message = await channel.send({ embeds });
+  setSetting('roster_message', `${channel.id}:${message.id}`);
 
-  await interaction.reply({ embeds, ephemeral: false });
+  await interaction.reply({ content: '✅ Roster posted! It will auto-update when members register.', ephemeral: true });
 }

@@ -52,6 +52,11 @@ function runMigrations(db: Database.Database): void {
       UNIQUE(wipe_id, user_id)
     );
 
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS players (
       user_id     TEXT PRIMARY KEY,
       username    TEXT NOT NULL,
