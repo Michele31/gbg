@@ -17,7 +17,7 @@ function relativeDate(dateStr: string, timeStr: string): string {
 function formatNames(rows: AttendanceRow[], status: 'yes' | 'no' | 'late'): string {
   const filtered = rows.filter((r) => r.status === status);
   if (filtered.length === 0) return 'None';
-  return filtered.map((r) => `<@${r.user_id}>${r.vip === 1 ? ' 👑' : ''}`).join('\n');
+  return filtered.map((r) => `<@${r.user_id}>`).join('\n');
 }
 
 export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
@@ -43,7 +43,7 @@ export function buildWipeEmbed(wipe: WipeRow): EmbedBuilder {
         inline: true,
       },
       {
-        name: `👑 VIP (${counts.vip})`,
+        name: `💎 VIP (${counts.vip})`,
         value:
           rows.filter((r) => r.vip === 1).map((r) => `<@${r.user_id}>`).join('\n') || 'None',
         inline: true,
@@ -79,7 +79,7 @@ export function buildAttendanceEmbed(wipe: WipeRow, rows: AttendanceRow[]): Embe
     .addFields(
       { name: `✅ Yes (${counts.yes})`, value: formatNames(rows, 'yes'), inline: true },
       {
-        name: `👑 VIP (${counts.vip})`,
+        name: `💎 VIP (${counts.vip})`,
         value: rows.filter((r) => r.vip === 1).map((r) => `<@${r.user_id}>`).join('\n') || 'None',
         inline: true,
       },
