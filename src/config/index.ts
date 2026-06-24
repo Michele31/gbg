@@ -25,4 +25,5 @@ export const config = {
   timezone: process.env.TIMEZONE ?? 'UTC',
   databasePath: process.env.DATABASE_PATH ?? './data/bot.db',
   joinNotificationChannelId: process.env.JOIN_NOTIFICATION_CHANNEL_ID ?? '1518998258171511017',
+  missingPanelChannelId: process.env.MISSING_PANEL_CHANNEL_ID ?? '1519398092149882890',
 } as const;

@@ -13,6 +13,7 @@ import { hasWipePermission } from '../utils/permissions';
 import { buildWipeEmbed } from '../utils/embeds';
 import { createWipe } from '../services/wipeService';
 import { getDisplayName } from '../utils/display';
+import { refreshMissingPanel } from '../services/missingService';
 import { logger } from '../utils/logger';
 
 export const data = new SlashCommandBuilder()
@@ -72,6 +73,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const embed = buildWipeEmbed(wipe);
   const row = buildAttendanceRow(wipe.id);
   await placeholder.edit({ content: pingContent ?? null, embeds: [embed], components: [row] });
+
+  // Reset the "not responded" panel for the new wipe
+  await refreshMissingPanel(interaction.client);
 
   logger.info(`Wipe #${wipe.id} created by ${interaction.user.username} in guild ${interaction.guildId}`);
 }
