@@ -17,13 +17,14 @@ import * as unregister from './unregister';
 import * as adminregister from './adminregister';
 import * as syncnames from './syncnames';
 import * as resolvesteam from './resolvesteam';
+import * as registerremind from './registerremind';
 
 export interface Command {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
 }
 
-const commandList: Command[] = [wipe, attendance, exportCmd, closewipe, remind, register, profile, code, roster, unregister, adminregister, syncnames, resolvesteam];
+const commandList: Command[] = [wipe, attendance, exportCmd, closewipe, remind, register, profile, code, roster, unregister, adminregister, syncnames, resolvesteam, registerremind];
 
 export const commands = new Collection<string, Command>(
   commandList.map((cmd) => [cmd.data.name, cmd]),
