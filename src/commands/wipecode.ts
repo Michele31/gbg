@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
-  .setName('code')
+  .setName('wipecode')
   .setDescription('Generate a random 4-digit code');
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
