@@ -1,6 +1,7 @@
 import { Client } from 'discord.js';
 import * as ready from './ready';
 import * as interactionCreate from './interactionCreate';
+import * as guildMemberRemove from './guildMemberRemove';
 
 interface EventModule {
   name: string;
@@ -8,7 +9,7 @@ interface EventModule {
   execute(...args: unknown[]): Promise<void>;
 }
 
-const events: EventModule[] = [ready, interactionCreate];
+const events: EventModule[] = [ready, interactionCreate, guildMemberRemove];
 
 export function registerEvents(client: Client): void {
   for (const event of events) {
