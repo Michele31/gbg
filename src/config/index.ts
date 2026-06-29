@@ -26,4 +26,5 @@ export const config = {
   databasePath: process.env.DATABASE_PATH ?? './data/bot.db',
   joinNotificationChannelId: process.env.JOIN_NOTIFICATION_CHANNEL_ID ?? '1518998258171511017',
   missingPanelChannelId: process.env.MISSING_PANEL_CHANNEL_ID ?? '1519398092149882890',
+  turretsRoleId: process.env.TURRETS_ROLE_ID ?? '1518604384584339616',
 } as const;
