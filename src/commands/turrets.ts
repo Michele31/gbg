@@ -49,7 +49,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     .setColor(`#${config.embedColor}` as ColorResolvable)
     .setTitle('🔫 Turrets — People to Add')
     .setDescription(
-      `Give a member the <@&${config.turretsRoleId}> role to add them here.\n\n` +
+      `**Add the following players to be authorized to turrets**\n\n` +
       lines.join('\n'),
     )
     .setFooter({ text: `${members.size} member${members.size !== 1 ? 's' : ''} with turrets role` })
