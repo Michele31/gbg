@@ -20,13 +20,14 @@ import * as resolvesteam from './resolvesteam';
 import * as registerremind from './registerremind';
 import * as missingpanel from './missingpanel';
 import * as turrets from './turrets';
+import * as displayunregistered from './displayunregistered';
 
 export interface Command {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
 }
 
-const commandList: Command[] = [wipe, attendance, exportCmd, closewipe, remind, register, profile, wipecode, roster, unregister, adminregister, syncnames, resolvesteam, registerremind, missingpanel, turrets];
+const commandList: Command[] = [wipe, attendance, exportCmd, closewipe, remind, register, profile, wipecode, roster, unregister, adminregister, syncnames, resolvesteam, registerremind, missingpanel, turrets, displayunregistered];
 
 export const commands = new Collection<string, Command>(
   commandList.map((cmd) => [cmd.data.name, cmd]),
